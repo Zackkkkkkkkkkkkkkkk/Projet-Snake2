@@ -1,0 +1,223 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+
+
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{setspace}
+\onehalfspacing
+\raggedbottom
+
+
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+
+\usepackage{titlesec}
+\titlespacing*{\chapter}{0pt}{1.0\baselineskip}{0.5\baselineskip}
+\titlespacing*{\section}{0pt}{0.8\baselineskip}{0.35\baselineskip}
+\titlespacing*{\subsection}{0pt}{0.6\baselineskip}{0.25\baselineskip}
+
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+
+\begin{document}
+
+
+\begin{titlepage}
+\centering
+\vspace*{5cm}
+{\LARGE \textbf{Rapport de projet — Jeu Snake en C}\par}
+\vspace{15cm}
+
+\begin{tabular}{rl}
+\textbf{Formation} : & Informatique \\
+\textbf{Équipe} : & Anaïs Anol, Christelle Leuilly, Zacharie Tabord, Charmaine Panhuyzen \\
+\textbf{Date} : & \today \\
+\end{tabular}
+
+\vfill
+\end{titlepage}
+
+\chapter*{Résumé}
+\addcontentsline{toc}{chapter}{Résumé}
+Dans ce projet, nous avons développé un jeu \textit{Snake} en C, jouable dans un terminal Ubuntu.
+La carte est chargée depuis un fichier texte et contient des obstacles (\texttt{\#}) ainsi que des espaces vides.
+Le joueur contrôle le serpent au clavier. Des bonus sous forme de lettres apparaissent sur des cases libres : lorsqu’un bonus est mangé,
+le serpent grandit et le score augmente. Le projet a été réalisé en équipe, avec une progression par étapes (carte, déplacements,
+bonus, croissance, score, menu) et une phase importante de tests/débogage.
+Plusieurs problèmes ont été rencontrés (auto-collision après ingestion, tête réinitialisée à \texttt{z}, lecture des espaces),
+et ont été corrigés en clarifiant l’ordre des mises à jour et la circulation des données entre modules.
+
+\tableofcontents
+
+% ============================================================
+\chapter{Introduction}
+
+\section{Contexte}
+Le jeu \textit{Snake} est un classique sur grille : à mesure que le serpent grandit, la partie devient plus difficile,
+car le serpent devient lui-même un obstacle. Dans le cadre de ce projet, l’objectif était de mettre en pratique des notions
+essentielles en C : lecture de fichiers, structures dynamiques, gestion d’un état de jeu et détection de collisions.
+
+\section{Objectifs}
+\begin{itemize}
+  \item Charger une carte depuis un fichier texte et l’afficher correctement.
+  \item Gérer les déplacements du serpent au clavier et le rafraîchissement de l’affichage.
+  \item Détecter les collisions (obstacles, bordures, corps du serpent) et terminer la partie.
+  \item Générer des bonus (lettres) sur des cases libres et gérer leur consommation.
+  \item Faire grandir le serpent et mettre à jour le score à chaque bonus mangé.
+  \item Proposer un menu pour lancer la partie et naviguer dans les options prévues.
+\end{itemize}
+
+% ============================================================
+\chapter{Organisation du projet}
+
+\section{Méthode de travail}
+Nous avons travaillé par étapes pour garder une version exécutable le plus tôt possible :
+affichage de carte $\rightarrow$ déplacements $\rightarrow$ bonus $\rightarrow$ croissance $\rightarrow$ score $\rightarrow$ menu,
+puis tests et corrections. Cette approche a rendu le débogage plus simple : lorsqu’un bug apparaissait, il était plus facile de relier
+le problème à la dernière fonctionnalité ajoutée.
+
+\section{Répartition des tâches}
+La répartition a été faite selon les parties du sujet et les besoins du projet.
+
+\begin{figure}[!htbp]
+\centering
+\textbf{Diagramme de répartition des tâches (équipe de 4)}\par\vspace{0.5cm}
+
+\begin{tikzpicture}[
+  box/.style={draw, rounded corners, align=left, inner sep=8pt, text width=6.2cm},
+  arrow/.style={-Latex, thick}
+]
+\node[box] (anais) {\textbf{Anaïs Anol}\\
+\textbf{Parties :} 1 et 2\\
+\textbf{Rôle :} carte/affichage + logique de base (déplacements, règles de fin).};
+
+\node[box, right=1.4cm of anais] (christelle) {\textbf{Christelle Leuilly}\\
+\textbf{Rôle :} gestion du fait que le serpent mange (lettre consommée, mise à jour correcte) + score.};
+
+\node[box, below=1.2cm of anais] (zach) {\textbf{Zacharie Tabord}\\
+\textbf{Rôle :} menu + fonctionnalités associées (navigation, options, lancement/arrêt).};
+
+\node[box, below=1.2cm of christelle] (charmaine) {\textbf{Charmaine Panhuyzen}\\
+\textbf{Partie :} 5 + Rapport\\
+\textbf{Rôle :} partie 5 + rédaction/mise en forme du rapport.};
+
+
+\draw[arrow] (anais.east) -- (christelle.west);
+\draw[arrow] (zach.east) -- (charmaine.west);
+\end{tikzpicture}
+
+\caption{Répartition des tâches par membre de l’équipe.}
+\label{fig:repartition}
+\end{figure}
+
+\section{Collaboration (GitHub et communication)}
+GitHub a été un point d’apprentissage important. Comme nous ne l’avions pas utilisé en équipe auparavant, nous avons rencontré des conflits
+de fusion et des erreurs après intégration. Avec le temps, nous avons amélioré notre façon de faire : commits plus petits, tests avant \textit{push},
+et clarification sur qui modifie quel fichier. La communication a aussi été un enjeu : quand plusieurs corrections arrivent en même temps,
+il devient difficile de comprendre l’origine d’un bug. Nous avons donc essayé de limiter les modifications simultanées sur les mêmes fichiers.
+
+% ============================================================
+\chapter{Conception}
+
+\section{Structure générale}
+Nous avons organisé le projet en blocs logiques :
+\begin{itemize}
+  \item \textbf{Carte} : chargement depuis fichier, représentation en grille, obstacles/cases vides.
+  \item \textbf{Serpent} : positions du corps, déplacement, croissance, auto-collision.
+  \item \textbf{Bonus et score} : génération d’une lettre, détection de consommation, mise à jour du score.
+  \item \textbf{Menu et boucle de jeu} : lancement, options, exécution de la partie, fin de partie.
+\end{itemize}
+
+\section{Choix de structures de données}
+Le serpent grandit au fil du jeu. Une liste chaînée (demandée par l’enseignant) correspond bien à ce besoin :
+on ajoute une nouvelle tête à chaque mouvement, et on enlève la queue seulement si le serpent n’a pas mangé.
+La carte, elle, est stockée en grille 2D chargée depuis fichier, ce qui facilite les accès et la vérification des obstacles.
+
+% ============================================================
+\chapter{Réalisation}
+
+\section{Lecture de la carte}
+La lecture du fichier de carte a nécessité une attention particulière à la gestion des espaces (cases vides).
+Une lecture incorrecte déforme la carte et fausse les collisions. Nous avons donc veillé à remplir la grille selon les dimensions annoncées,
+en gardant la structure exacte des lignes.
+
+\section{Déplacements, collisions, et croissance}
+À chaque déplacement, nous calculons la prochaine position de la tête, puis nous vérifions :
+bordure, obstacle, corps. Si le mouvement est valide, nous mettons à jour le serpent.
+Lorsqu’un bonus est mangé, le serpent grandit. L’ordre des opérations a été essentiel pour éviter des collisions “fausses”.
+
+\section{Bonus et score}
+Les bonus apparaissent sur des cases libres. Quand le serpent mange une lettre :
+\begin{itemize}
+  \item la nouvelle tête prend la lettre consommée (et n’est pas réinitialisée à \texttt{z}) ;
+  \item le serpent grandit ;
+  \item le score est mis à jour ;
+  \item un nouveau bonus est généré.
+\end{itemize}
+Le score est affiché pendant la partie et se met à jour à chaque consommation.
+
+\section{Menu}
+Le menu permet de lancer le jeu proprement et d’accéder aux options prévues (selon notre version).
+Il améliore l’utilisation du programme (démarrage plus clair, navigation plus simple).
+
+% ============================================================
+\chapter{Difficultés rencontrées}
+
+\section{Auto-collision après consommation d’une lettre}
+Après avoir mangé une lettre, le serpent pouvait se mordre trop vite ou se retrouver bloqué.
+La correction a surtout consisté à clarifier l’ordre de mise à jour : d’abord calculer la prochaine case, ensuite tester les collisions,
+puis mettre à jour le corps. Nous avons aussi fait attention à distinguer les cas où le serpent grandit et ceux où il n’agrandit pas.
+
+\section{Tête réinitialisée à \texttt{z}}
+Un bug faisait que la tête affichait \texttt{z} à la place de la lettre mangée.
+Nous l’avons corrigé en transmettant explicitement la lettre consommée lors de la création du nouveau segment en tête,
+et en évitant d’écraser cette valeur par une lettre par défaut.
+
+\section{Travail en groupe (GitHub et communication)}
+Nous avons eu des difficultés au début avec GitHub (conflits, intégration) et avec la communication (plusieurs corrections simultanées).
+Au fur et à mesure, nous avons amélioré notre organisation : définition plus claire des fichiers “réservés”, tests avant intégration,
+et coordination avant de modifier des parties sensibles du code.
+
+% ============================================================
+\chapter{Tests et résultats}
+
+\section{Tests réalisés}
+Nous avons testé le jeu avec plusieurs cartes et situations :
+\begin{itemize}
+  \item cartes simples pour valider les déplacements ;
+  \item cartes avec obstacles pour valider les collisions ;
+  \item parties plus longues pour vérifier la stabilité quand le serpent grandit ;
+  \item tests ciblés sur les bugs rencontrés (auto-collision, lettre de la tête, lecture de carte, score).
+\end{itemize}
+
+\section{Résultat final}
+Le jeu final :
+\begin{itemize}
+  \item charge une carte depuis un fichier et l’affiche correctement ;
+  \item permet de jouer (déplacements, collisions, fin de partie) ;
+  \item gère les bonus (lettres), la croissance du serpent et le score ;
+  \item propose un menu pour lancer et utiliser le programme.
+\end{itemize}
+
+% ============================================================
+\chapter{Conclusion}
+
+\section{Bilan}
+Nous avons réussi à développer un \textit{Snake} fonctionnel en C en terminal : carte depuis fichier, déplacements, collisions, bonus,
+croissance, score et menu. Le projet nous a appris à structurer un programme, à corriger des bugs liés à l’ordre des mises à jour,
+et à travailler en équipe avec GitHub.
+
+\section{Améliorations possibles}
+Avec plus de temps, nous améliorerions surtout :
+\begin{itemize}
+  \item l’organisation GitHub (branches, fusion plus propre) ;
+  \item quelques éléments de confort (vitesse progressive, statistiques de fin, etc.) si demandé.
+\end{itemize}
+
+\end{document}
