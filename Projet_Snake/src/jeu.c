@@ -5,7 +5,28 @@
 
 void initialiserJeu(Jeu* jeu, const char* nomCarte) {
     jeu->carte = chargerCarte(nomCarte);
-    jeu->serpent = creerSerpent(1, 1);
+    
+    // Vérifier que la carte a été chargée correctement
+    if (!jeu->carte.grille) {
+        jeu->perdu = 1;
+        return;
+    }
+    
+    // Trouver une position valide pour le serpent
+    int x = 1, y = 1;
+    int trouve = 0;
+    
+    for (int i = 1; i < jeu->carte.lignes - 1 && !trouve; i++) {
+        for (int j = 1; j < jeu->carte.colonnes - 1 && !trouve; j++) {
+            if (jeu->carte.grille[i][j] == ' ') {
+                x = i;
+                y = j;
+                trouve = 1;
+            }
+        }
+    }
+    
+    jeu->serpent = creerSerpent(x, y);
     jeu->bonus.actif = 0;
     jeu->score = 0;
     jeu->perdu = 0;
@@ -55,7 +76,9 @@ int deplacerSerpent(Jeu* jeu, char direction) {
         jeu->bonus.actif = 0;
         genererBonus(jeu);
     } else {
-        ajouterTete(&jeu->serpent, nouveauX, nouveauY, jeu->serpent.tete->suivant->lettre);
+        // Pour un serpent d'une seule case, garder la même lettre
+        char lettre = (jeu->serpent.longueur == 1) ? jeu->serpent.tete->lettre : jeu->serpent.tete->suivant->lettre;
+        ajouterTete(&jeu->serpent, nouveauX, nouveauY, lettre);
         supprimerQueue(&jeu->serpent);
     }
     

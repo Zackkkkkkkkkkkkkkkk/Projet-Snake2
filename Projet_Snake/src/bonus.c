@@ -9,6 +9,11 @@ int estVoyelle(char c) {
 }
 
 void genererBonus(Jeu* jeu) {
+    // Vérifier que la carte existe
+    if (!jeu || !jeu->carte.grille || jeu->carte.lignes <= 0 || jeu->carte.colonnes <= 0) {
+        return;
+    }
+    
     int tentatives = 0;
     int x, y;
     

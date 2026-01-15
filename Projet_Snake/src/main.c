@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 #include "../header/types.h"
 #include "../header/carte.h"
 #include "../header/serpent.h"
@@ -12,11 +13,21 @@ int main() {
     srand(time(NULL));
     
     int choix;
-    char nomCarte[100];
+    char nomCarte[256];
+    
+    // Afficher le répertoire courant
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        printf("Répertoire courant: %s\n", cwd);
+    }
     
     while (1) {
         afficherMenu();
-        scanf("%d", &choix);
+        if (scanf("%d", &choix) != 1) {
+            viderBuffer();
+            printf("Entrée invalide!\n");
+            continue;
+        }
         viderBuffer();
         
         if (choix == 3) break;
@@ -24,12 +35,31 @@ int main() {
         Jeu jeu;
         
         if (choix == 1) {
-            printf("Nom du fichier carte (ex: carte.txt): ");
-            scanf("%s", nomCarte);
+            printf("\nFichiers disponibles dans ce dossier:\n");
+            system("ls -la *.txt 2>/dev/null || echo 'Aucun fichier .txt trouvé'");
+            
+            printf("\nNom du fichier carte (ex: carte.txt): ");
+            if (scanf("%255s", nomCarte) != 1) {
+                viderBuffer();
+                printf("Erreur de lecture!\n");
+                continue;
+            }
             viderBuffer();
             
             initialiserJeu(&jeu, nomCarte);
-            if (!jeu.carte.grille) continue;
+            if (!jeu.carte.grille) {
+                printf("Impossible de charger la carte. Appuyez sur Entrée...\n");
+                getchar();
+                continue;
+            }
+        } else if (choix == 2) {
+            printf("Fonctionnalité de chargement pas encore implémentée.\n");
+            printf("Appuyez sur Entrée...\n");
+            getchar();
+            continue;
+        } else {
+            printf("Choix invalide!\n");
+            continue;
         }
         
         // Boucle de jeu
@@ -38,18 +68,19 @@ int main() {
             
             char cmd;
             printf("\nCommande: ");
-            scanf(" %c", &cmd);
+            if (scanf(" %c", &cmd) != 1) {
+                viderBuffer();
+                continue;
+            }
             viderBuffer();
             
             if (cmd == 'q') {
                 printf("Sauvegarder? (o/n): ");
                 char rep;
-                scanf(" %c", &rep);
-                viderBuffer();
-                
-                if (rep == 'o') {
+                if (scanf(" %c", &rep) == 1 && rep == 'o') {
                     sauvegarderJeu(&jeu, "sauvegarde.txt");
                 }
+                viderBuffer();
                 break;
             }
             
